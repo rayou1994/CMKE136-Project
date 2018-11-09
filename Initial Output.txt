@@ -1,0 +1,118 @@
+> setwd("E:/Raymond/Documents/CKME 136/flights")
+> flights <- read.csv(file="flights.csv", header=TRUE)
+> dim(flights)
+[1] 5819079      31
+> # Remove entries that are cancelled and diverted flights.
+> flights1 <- flights[flights$CANCELLED==0&flights$DIVERTED==0,]
+> # Creating an indicator variable for flights that were delayed.
+> flights1$DELAYED <- flights1$AIR_SYSTEM_DELAY+flights1$SECURITY_DELAY+flights1$AIRLINE_DELAY+flights1$LATE_AIRCRAFT_DELAY+flights1$WEATHER_DELAY>0
+> flights1$DELAYED <- !is.na(flights1$DELAYED)
+> # Subtracting the delays not related to airline delay from the arrival delay.
+> flights1[flights1$DELAYED==TRUE,]$ARRIVAL_DELAY <- flights1[flights1$DELAYED==TRUE,]$ARRIVAL_DELAY-flights1[flights1$DELAYED==TRUE,]$AIR_SYSTEM_DELAY-flights1[flights1$DELAYED==TRUE,]$SECURITY_DELAY-flights1[flights1$DELAYED==TRUE,]$LATE_AIRCRAFT_DELAY-flights1[flights1$DELAYED==TRUE,]$WEATHER_DELAY
+> 
+> # So for initial results we will just use a 70/30 split in the data for training and testing.
+> dim(flights1)
+[1] 5714008      32
+> set.seed(100)
+> sample1 <- sample(1:5714008, 5714008)
+> traindf <- sample1[1:3999805]
+> testdf <- sample1[3999806:5714008]
+> 
+> # Fitting the models with the training data. The first model is without the indicator variable whether a flight is delayed or not, while the second model includes it.
+> lm1 <- lm(ARRIVAL_DELAY~AIRLINE+factor(DAY_OF_WEEK)+DISTANCE, data=flights1, subset=traindf)
+> summary(lm1)
+
+Call:
+lm(formula = ARRIVAL_DELAY ~ AIRLINE + factor(DAY_OF_WEEK) + 
+    DISTANCE, data = flights1, subset = traindf)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+ -83.09  -10.20   -1.97    4.95 1973.73 
+
+Coefficients:
+                       Estimate Std. Error t value Pr(>|t|)    
+(Intercept)          -2.176e+00  5.247e-02 -41.468  < 2e-16 ***
+AIRLINEAS            -1.374e+00  8.098e-02 -16.961  < 2e-16 ***
+AIRLINEB6             7.458e-01  6.868e-02  10.859  < 2e-16 ***
+AIRLINEDL            -1.541e+00  4.823e-02 -31.957  < 2e-16 ***
+AIRLINEEV             1.515e+00  5.546e-02  27.324  < 2e-16 ***
+AIRLINEF9             2.443e+00  1.063e-01  22.980  < 2e-16 ***
+AIRLINEHA             3.404e+00  1.152e-01  29.548  < 2e-16 ***
+AIRLINEMQ            -3.460e-01  6.863e-02  -5.041 4.62e-07 ***
+AIRLINENK             3.500e+00  9.540e-02  36.689  < 2e-16 ***
+AIRLINEOO             1.224e+00  5.471e-02  22.367  < 2e-16 ***
+AIRLINEUA             3.164e-01  5.549e-02   5.702 1.18e-08 ***
+AIRLINEUS             1.071e+00  7.715e-02  13.883  < 2e-16 ***
+AIRLINEVX             1.264e-01  1.269e-01   0.996    0.319    
+AIRLINEWN             8.591e-01  4.521e-02  19.004  < 2e-16 ***
+factor(DAY_OF_WEEK)2 -7.071e-01  4.656e-02 -15.185  < 2e-16 ***
+factor(DAY_OF_WEEK)3 -6.137e-01  4.634e-02 -13.242  < 2e-16 ***
+factor(DAY_OF_WEEK)4  2.347e-01  4.615e-02   5.085 3.67e-07 ***
+factor(DAY_OF_WEEK)5  7.083e-02  4.624e-02   1.532    0.126    
+factor(DAY_OF_WEEK)6 -1.466e+00  4.887e-02 -30.005  < 2e-16 ***
+factor(DAY_OF_WEEK)7 -6.081e-01  4.694e-02 -12.955  < 2e-16 ***
+DISTANCE             -1.042e-03  2.291e-05 -45.469  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 25.17 on 3999784 degrees of freedom
+Multiple R-squared:  0.003508,	Adjusted R-squared:  0.003503 
+F-statistic: 704.1 on 20 and 3999784 DF,  p-value: < 2.2e-16
+
+> lm2 <- lm(ARRIVAL_DELAY~AIRLINE+factor(DAY_OF_WEEK)+DISTANCE+DELAYED, data=flights1, subset=traindf)
+> summary(lm2)
+
+Call:
+lm(formula = ARRIVAL_DELAY ~ AIRLINE + factor(DAY_OF_WEEK) + 
+    DISTANCE + DELAYED, data = flights1, subset = traindf)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+ -77.31  -10.03   -1.48    6.84 1951.72 
+
+Coefficients:
+                       Estimate Std. Error  t value Pr(>|t|)    
+(Intercept)          -7.300e+00  4.802e-02 -152.013  < 2e-16 ***
+AIRLINEAS             6.601e-02  7.363e-02    0.897  0.36996    
+AIRLINEB6            -4.042e-01  6.244e-02   -6.473 9.58e-11 ***
+AIRLINEDL            -2.753e-01  4.386e-02   -6.276 3.47e-10 ***
+AIRLINEEV             1.075e+00  5.041e-02   21.329  < 2e-16 ***
+AIRLINEF9             2.929e-01  9.664e-02    3.031  0.00244 ** 
+AIRLINEHA             5.255e+00  1.047e-01   50.168  < 2e-16 ***
+AIRLINEMQ            -1.363e+00  6.240e-02  -21.843  < 2e-16 ***
+AIRLINENK             3.871e-01  8.679e-02    4.460 8.18e-06 ***
+AIRLINEOO             1.044e+00  4.973e-02   20.988  < 2e-16 ***
+AIRLINEUA            -2.513e-01  5.044e-02   -4.982 6.31e-07 ***
+AIRLINEUS             9.172e-01  7.012e-02   13.080  < 2e-16 ***
+AIRLINEVX            -1.176e-01  1.153e-01   -1.020  0.30773    
+AIRLINEWN             6.262e-01  4.109e-02   15.240  < 2e-16 ***
+factor(DAY_OF_WEEK)2 -3.029e-01  4.233e-02   -7.156 8.31e-13 ***
+factor(DAY_OF_WEEK)3 -1.830e-01  4.213e-02   -4.343 1.40e-05 ***
+factor(DAY_OF_WEEK)4  1.691e-01  4.195e-02    4.030 5.57e-05 ***
+factor(DAY_OF_WEEK)5  2.288e-01  4.203e-02    5.444 5.20e-08 ***
+factor(DAY_OF_WEEK)6 -4.375e-01  4.444e-02   -9.846  < 2e-16 ***
+factor(DAY_OF_WEEK)7 -1.968e-01  4.267e-02   -4.612 3.99e-06 ***
+DISTANCE             -1.190e-03  2.082e-05  -57.172  < 2e-16 ***
+DELAYEDTRUE           2.706e+01  2.951e-02  917.229  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 22.88 on 3999783 degrees of freedom
+Multiple R-squared:  0.1767,	Adjusted R-squared:  0.1767 
+F-statistic: 4.087e+04 on 21 and 3999783 DF,  p-value: < 2.2e-16
+
+> 
+> # Function to find the root mean squared error of the predicted values.
+> RMSE <- function(actual, fitted) {
++   sqrt(mean((actual-fitted)^2))
++ }
+> 
+> # Predicting the testing set using the fitted models
+> predict1 <- predict(lm1,newdata=flights1[testdf,],type="response")
+> RMSE(flights1[testdf,]$ARRIVAL_DELAY,predict1)
+[1] 25.25476
+> 
+> predict2 <- predict(lm2,newdata=flights1[testdf,],type="response")
+> RMSE(flights1[testdf,]$ARRIVAL_DELAY,predict2)
+[1] 22.98292
